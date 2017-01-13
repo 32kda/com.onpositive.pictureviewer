@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            allowMultiple="false"
+            class="com.onpositive.pictureviewer.ImagesViewPart"
+            icon="icons/palette_layout.gif"
+            id="com.onpositive.pictureviewer.imagesView"
+            name="Images">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective"
+            >
+         <viewShortcut
+               id="org.eclipse.ui.navigator.ProjectExplorer">
+         </viewShortcut>
+      </perspectiveExtension>
+      <perspectiveExtension targetID="org.eclipse.pde.ui.PDEPerspective">
+         <viewShortcut
+               id="com.onpositive.pictureviewer.imagesView">
+         </viewShortcut>
+      </perspectiveExtension>
+      <perspectiveExtension targetID="org.eclipse.ui.resourcePerspective">
+         <viewShortcut
+               id="com.onpositive.pictureviewer.imagesView">
+         </viewShortcut>
+      </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="com.onpositive.pictureviewer.StartupHandler"></startup>
+   </extension>
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            adaptable="true"
+            id="com.onpositive.pictureviewer.objectContribution1"
+            objectClass="org.eclipse.core.resources.IContainer">
+         <action
+               class="com.onpositive.pictureviewer.PasteImageAction"
+               icon="icons/palette_layout.gif"
+               id="com.onpositive.pictureviewer.action1"
+               label="Paste Image"
+               menubarPath="additions"
+               style="push">
+         </action>
+      </objectContribution>
+   </extension>
+  
+
+</plugin>
