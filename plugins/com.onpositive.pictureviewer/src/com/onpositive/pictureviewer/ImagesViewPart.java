@@ -63,8 +63,10 @@ import com.onpositive.pictureviewer.PlatformImages;
 import com.onpositive.pictureviewer.SelectionImages;
 import com.onpositive.pictureviewer.StringMatcher;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -86,6 +88,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
@@ -122,7 +125,9 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
  */
 public class ImagesViewPart
 extends ViewPart {
-    private static final String GROP_RENDERER_TAG = "g";
+    private static final int ITEM_WIDTH = 72;
+	private static final int ITEM_HEIGHT = 56;
+	private static final String GROP_RENDERER_TAG = "g";
 	private static final int EXPAND_THRESHOLD = 20;
 	private DefaultToolTip tooltip;
     ImageDescriptor zoom = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/zoom_in.gif");
@@ -298,7 +303,7 @@ extends ViewPart {
 //                }
 //            }
         });
-        DragSource dragSource = new DragSource((Control)gallery, 1);
+        DragSource dragSource = new DragSource((Control)gallery, DND.DROP_COPY);
         dragSource.setTransfer(new Transfer[]{FileTransfer.getInstance()});
         dragSource.addDragListener(new DragSourceListener(){
             private String[] dataX;
@@ -308,7 +313,32 @@ extends ViewPart {
             }
 
             public void dragSetData(DragSourceEvent event) {
-                event.data = this.dataX;
+            	if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
+            		event.data = this.dataX;
+            	} else if (TextTransfer.getInstance().isSupportedType(event.dataType) && this.dataX != null && this.dataX[0] != null) {
+                	event.data = new File(this.dataX[0]).getName();
+                } 
+                
+//                Object data;
+//                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
+//                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
+//	                if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
+//	                    IImageEntry e = (IImageEntry)data;
+//	                    String file = e.getFile();
+//	                    File fl = file != null?new File(file):null;
+//						if (fl == null || !(fl.exists()) 
+//	                    		|| (fl.isDirectory())) {
+//	                    	event.doit = false;
+//	                    	return;
+//	                    }
+//	                    final String[] files=new String[] {file};
+//	                    event.data=files;
+//	                    event.doit=true;
+//	                } else if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
+//	                	IImageEntry e = (IImageEntry)data;
+//	                	event.data = e.getName();
+//	                }
+//        		}
             }
 
             public void dragStart(DragSourceEvent event) {
@@ -328,6 +358,20 @@ extends ViewPart {
                 }
             }
         });
+        
+//        final IHandlerActivation activation = handlerService
+//        		.activateHandler(IWorkbenchCommandConstants.EDIT_COPY,
+//        		new CopyHandler(items),
+//        		new ControlExpression(items.getControl()));
+//
+//        		// clean up by deactivating the handler. The focus tracker will
+//        		// be removed on dispose automatically
+//        		items.getControl().addDisposeListener(new DisposeListener() {
+//        		@Override
+//        		public void widgetDisposed(DisposeEvent e) {
+//        		handlerService.deactivateHandler(activation);
+//        		}
+//        		});
         final IImageEntryCallback cb = new IImageEntryCallback(){
 
 			@Override
@@ -353,12 +397,12 @@ extends ViewPart {
         });
         item.setData(GROP_RENDERER_TAG, groupRenderer);
 //        gr.setDrawVertically(false);
-        groupRenderer.setItemHeight(56);
-        groupRenderer.setItemWidth(72);
+        groupRenderer.setItemHeight(ITEM_HEIGHT);
+        groupRenderer.setItemWidth(ITEM_WIDTH);
         this.fillContextMenu(gallery, groupRenderer);
         this.tooltip = new GalleryTooltip((Control)gallery, gallery);
-        final ArrayList<Object> images = new ArrayList<Object>(store.getContents());
-        this.prepareImages(images);
+        final ArrayList<ItemGroup> imageGroups = new ArrayList<ItemGroup>(store.getContents());
+        this.prepareImages(imageGroups);
         gallery.addListener(SWT.SetData, new Listener(){
 
             public void handleEvent(Event event) {
@@ -366,7 +410,7 @@ extends ViewPart {
                 GalleryItem parentItem = item.getParentItem();
                 if (parentItem == null) {
                     int index = gallery.indexOf(item);
-                    ItemGroup itemGroup = (ItemGroup)images.get(index);
+                    ItemGroup itemGroup = (ItemGroup)imageGroups.get(index);
                     item.setText(itemGroup.getName());
                     item.setData((Object)itemGroup);
                     item.setItemCount(itemGroup.getChildCount());
@@ -381,7 +425,7 @@ extends ViewPart {
             }
         });
         final HashSet<ItemGroup> expanded = new HashSet<>();
-        item.setData("ga", (Object)new Collapser(){
+        item.setData("ga", new Collapser(){
 
             public void collapse() {
                 int a = 0;
@@ -420,7 +464,7 @@ extends ViewPart {
                 Display.getDefault().asyncExec(new Runnable(){
 
                     public void run() {
-                        refresh(gallery, images, expanded, contents);
+                        refresh(gallery, imageGroups, expanded, contents);
                     }
                 });
             }
@@ -430,7 +474,7 @@ extends ViewPart {
 
             public void refresh() {
                 ArrayList<ItemGroup> contents = new ArrayList<>(store.getContents());
-                ImagesViewPart.this.refresh(gallery, images, expanded, new ArrayList<>(contents));
+                ImagesViewPart.this.refresh(gallery, imageGroups, expanded, new ArrayList<>(contents));
             }
         });
         store.addListener(storeImageListener);
@@ -440,37 +484,35 @@ extends ViewPart {
                 store.removeListener(storeImageListener);
             }
         });
-        gallery.setItemCount(images.size());
+        gallery.setItemCount(imageGroups.size());
     }
 
-    private void refresh(Gallery gallery, ArrayList<Object> images, HashSet<ItemGroup> expanded, ArrayList<?> contents) {
+    private void refresh(Gallery gallery, ArrayList<ItemGroup> images, HashSet<ItemGroup> expanded, ArrayList<ItemGroup> contents) {
         images.clear();
         int passedCount = 0;
         if (this.pattern == null || this.pattern.trim().length() == 0) {
-            images.addAll(contents);
+            images.addAll((Collection<? extends ItemGroup>) contents);
             passedCount += contents.size();
         } else {
             StringMatcher patternMatcher = new StringMatcher("*" + this.pattern + "*", true, false);
-            for (Object o : contents) {
-                if (!(o instanceof ItemGroup)) continue;
-                ItemGroup group = (ItemGroup)o;
+            for (ItemGroup group : contents) {
                 if (patternMatcher.match(group.getName())) {
-                    images.add(o);
+                    images.add(group);
                     passedCount += group.getChildCount();
                     continue;
                 }
-                ArrayList<IImageEntry> z = new ArrayList<IImageEntry>();
+                ArrayList<IImageEntry> filteredGroup = new ArrayList<IImageEntry>();
                 int a = 0;
                 while (a < group.getChildCount()) {
                     IImageEntry image = group.getImage(a);
                     if (patternMatcher.match(image.getName())) {
-                        z.add(image);
+                        filteredGroup.add(image);
                     }
                     ++a;
                 }
-                if (z.isEmpty()) continue;
-                passedCount += z.size();
-                images.add(new ItemGroup(group.getName(), z));
+                if (filteredGroup.isEmpty()) continue;
+                passedCount += filteredGroup.size();
+                images.add(new ItemGroup(group.getName(), filteredGroup));
             }
         }
         this.prepareImages(images);
@@ -481,16 +523,16 @@ extends ViewPart {
         		gallery.getItem(i).setExpanded(true);
 			}
         } else {
-	        for (Object o : expanded) {
-	            int indexOf = images.indexOf(o);
+	        for (ItemGroup group : expanded) {
+	            int indexOf = images.indexOf(group);
 	            if (indexOf == -1) continue;
 	            gallery.getItem(indexOf).setExpanded(true);
 	        }
         }
     }
 
-    private void prepareImages(ArrayList<Object> images) {
-        Collections.sort(images, new Comparator<Object>(){
+    private void prepareImages(ArrayList<ItemGroup> imageGroups) {
+        Collections.sort(imageGroups, new Comparator<Object>(){
 
             @Override
             public int compare(Object o1, Object o2) {
@@ -566,7 +608,7 @@ extends ViewPart {
     private void zoomOut(DefaultGalleryGroupRenderer gr) {
         int itemHeight = gr.getItemHeight();
         int itemWidth = gr.getItemWidth();
-        if (itemHeight > 40 && itemWidth > 56) {
+        if (itemHeight > 40 && itemWidth > ITEM_HEIGHT) {
             itemHeight -= 16;
             itemWidth -= 16;
         }

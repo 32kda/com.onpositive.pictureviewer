@@ -377,6 +377,7 @@ public class Gallery extends Canvas {
 		if (listener == null)
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		addListener(SWT.Expand, new TypedListener(listener));
+		addListener(SWT.Collapse, new TypedListener(listener));
 	}
 
 	/**
@@ -529,7 +530,8 @@ public class Gallery extends Canvas {
 		// TODO: report index
 		// e.index = index;
 		try {
-			notifyListeners(SWT.Expand, e);
+			int eventType = state?SWT.Expand:SWT.Collapse;
+			notifyListeners(eventType, e);
 		} catch (RuntimeException ex) {
 			ex.printStackTrace();
 		}
