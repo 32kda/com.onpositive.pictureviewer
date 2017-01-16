@@ -49,28 +49,16 @@
  */
 package com.onpositive.pictureviewer;
 
-import com.onpositive.pictureviewer.Activator;
-import com.onpositive.pictureviewer.DefaultToolTip;
-import com.onpositive.pictureviewer.GalleryTooltip;
-import com.onpositive.pictureviewer.IImageEntry;
-import com.onpositive.pictureviewer.IImageEntryCallback;
-import com.onpositive.pictureviewer.IImageStore;
-import com.onpositive.pictureviewer.IStoreImageListener;
-import com.onpositive.pictureviewer.ImageCache;
-import com.onpositive.pictureviewer.ImageTransferWrapper;
-import com.onpositive.pictureviewer.ItemGroup;
-import com.onpositive.pictureviewer.PlatformImages;
-import com.onpositive.pictureviewer.SelectionImages;
-import com.onpositive.pictureviewer.StringMatcher;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
@@ -79,6 +67,7 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.commands.ActionHandler;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.nebula.widgets.gallery.DefaultGalleryGroupRenderer;
 import org.eclipse.nebula.widgets.gallery.DefaultGalleryItemRenderer;
@@ -99,6 +88,8 @@ import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.TreeEvent;
 import org.eclipse.swt.events.TreeListener;
 import org.eclipse.swt.graphics.GC;
@@ -117,14 +108,77 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.IWorkbenchCommandConstants;
+import org.eclipse.ui.handlers.IHandlerActivation;
+import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 /*
  * This class specifies class file version 49.0 but uses Java 6 signatures.  Assumed Java 6.
  */
-public class ImagesViewPart
-extends ViewPart {
+public class ImagesViewPart extends ViewPart {
+	
+	private class CopyAction extends Action {
+		
+
+		public CopyAction() {
+			super("Copy", SWT.PUSH);
+		}
+		
+		public void run() {
+			IImageEntry selection = ImagesViewPart.this.getSelection();
+			if (selection == null) {
+				return;
+			}
+            boolean av = ImageTransferWrapper.isAvalable();
+            Object[] data = new Object[av ? 3 : 2];
+            int a = 0;
+                data[a++] = new String[]{selection.getFile()};
+                data[a++] = selection.getPath();
+                if (av) {
+                    try {
+                        data[a++] = selection.getImage().getImageData();
+                    }
+                    catch (IOException e) {
+                        Activator.log(e);
+                    }
+                }
+            Clipboard clipboard = new Clipboard(Display.getCurrent());
+            clipboard.setContents(data, new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()});
+            clipboard.dispose();
+        }
+		
+//		public void run() {
+//            GalleryItem[] selection = gallery.getSelection();
+//            boolean av = ImageTransferWrapper.isAvalable();
+//            Object[] data = new Object[selection.length * (av ? 3 : 2)];
+//            int a = 0;
+//            GalleryItem[] arrgalleryItem = selection;
+//            int n = arrgalleryItem.length;
+//            int n2 = 0;
+//            while (n2 < n) {
+//                GalleryItem s = arrgalleryItem[n2];
+//                IImageEntry entry = (IImageEntry)s.getData();
+//                data[a++] = new String[]{entry.getFile()};
+//                data[a++] = entry.getPath();
+//                if (av) {
+//                    try {
+//                        data[a++] = entry.getImage().getImageData();
+//                    }
+//                    catch (IOException e) {
+//                        Activator.log(e);
+//                    }
+//                }
+//                ++n2;
+//            }
+//            Clipboard clipboard = new Clipboard(Display.getCurrent());
+//            clipboard.setContents(data, new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()});
+//            clipboard.dispose();
+//        }
+		
+	}
+	
     private static final int ITEM_WIDTH = 72;
 	private static final int ITEM_HEIGHT = 56;
 	private static final String GROP_RENDERER_TAG = "g";
@@ -136,8 +190,10 @@ extends ViewPart {
     ImageDescriptor collapse = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/collapseall.gif");
     ImageDescriptor expand = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/expandall.gif");
     private Text textFilter;
-    private CTabFolder fld;
+    private CTabFolder tabFolder;
     private String pattern;
+    private Map<CTabItem, Gallery> tabGalleries = new HashMap<>();
+    private SelectionProviderAdapter selectionHandler = new SelectionProviderAdapter(this); 
 
     public void dispose() {
         this.tooltip.hide();
@@ -173,14 +229,22 @@ extends ViewPart {
         clearFlt.setImageDescriptor(this.clearCo);
         man.add((IAction)clearFlt);
         man.update(true);
-        this.fld = new CTabFolder(parent, 8389632);
-        this.configureTab(store, this.fld);
-        this.configureTab(store1, this.fld);
-        this.fld.setSelection(0);
+        this.tabFolder = new CTabFolder(parent, 8389632);
+        this.configureTab(store, this.tabFolder);
+        this.configureTab(store1, this.tabFolder);
+        this.tabFolder.setSelection(0);
+        this.tabFolder.addSelectionListener(new SelectionAdapter() {
+        	
+        	@Override
+        	public void widgetSelected(SelectionEvent e) {
+        		selectionHandler.refresh();
+        	}
+        	
+		});
         Action action = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.fld.getItems();
+                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
                 int n = items.length;
                 int n2 = 0;
                 while (n2 < n) {
@@ -191,13 +255,13 @@ extends ViewPart {
                 }
             }
         };
-        this.fld.setLayoutData((Object)new GridData(1808));
+        this.tabFolder.setLayoutData((Object)new GridData(1808));
         action.setText("Zoom In");
         action.setImageDescriptor(this.zoom);
         Action action2 = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.fld.getItems();
+                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
                 int n = items.length;
                 int n2 = 0;
                 while (n2 < n) {
@@ -215,7 +279,7 @@ extends ViewPart {
         Action colapseA = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.fld.getItems();
+                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
                 int n = items.length;
                 int n2 = 0;
                 while (n2 < n) {
@@ -229,7 +293,7 @@ extends ViewPart {
         Action expand = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.fld.getItems();
+                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
                 int n = items.length;
                 int n2 = 0;
                 while (n2 < n) {
@@ -250,11 +314,27 @@ extends ViewPart {
         toolBarManager.add((IAction)action);
         toolBarManager.add((IAction)action2);
         actionBars.updateActionBars();
+        
+        IHandlerService handlerService = (IHandlerService) (getSite()).getService(IHandlerService.class);
+        final IHandlerActivation activation = handlerService
+        		.activateHandler(IWorkbenchCommandConstants.EDIT_COPY,
+        		new ActionHandler(new CopyAction()));
+
+		// clean up by deactivating the handler. The focus tracker will
+		// be removed on dispose automatically
+		tabFolder.addDisposeListener(new DisposeListener() {
+			@Override
+			public void widgetDisposed(DisposeEvent e) {
+				handlerService.deactivateHandler(activation);
+			}
+		});
+        
+        getSite().setSelectionProvider(selectionHandler);
     }
 
     protected void refilter(Text textFilter2) {
         this.pattern = textFilter2.getText();
-        CTabItem[] items = this.fld.getItems();
+        CTabItem[] items = this.tabFolder.getItems();
         int n = items.length;
         int n2 = 0;
         while (n2 < n) {
@@ -266,11 +346,12 @@ extends ViewPart {
     }
 
     private void configureTab(final IImageStore store, CTabFolder fld) {
-        CTabItem item = new CTabItem(fld, 0);
+        CTabItem item = new CTabItem(fld, SWT.NONE);
         item.setText(store.getName());
         Composite cm = new Composite((Composite)fld, 0);
         cm.setLayout((Layout)new FillLayout());
         final Gallery gallery = new Gallery(cm, 268438016 | SWT.V_SCROLL);
+        tabGalleries.put(item, gallery);
         item.setControl((Control)cm);
 //        gallery.setVertical(false);
         DefaultGalleryGroupRenderer groupRenderer = new DefaultGalleryGroupRenderer();
@@ -303,75 +384,7 @@ extends ViewPart {
 //                }
 //            }
         });
-        DragSource dragSource = new DragSource((Control)gallery, DND.DROP_COPY);
-        dragSource.setTransfer(new Transfer[]{FileTransfer.getInstance()});
-        dragSource.addDragListener(new DragSourceListener(){
-            private String[] dataX;
-
-            public void dragFinished(DragSourceEvent event) {
-                this.dataX = null;
-            }
-
-            public void dragSetData(DragSourceEvent event) {
-            	if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
-            		event.data = this.dataX;
-            	} else if (TextTransfer.getInstance().isSupportedType(event.dataType) && this.dataX != null && this.dataX[0] != null) {
-                	event.data = new File(this.dataX[0]).getName();
-                } 
-                
-//                Object data;
-//                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
-//                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
-//	                if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
-//	                    IImageEntry e = (IImageEntry)data;
-//	                    String file = e.getFile();
-//	                    File fl = file != null?new File(file):null;
-//						if (fl == null || !(fl.exists()) 
-//	                    		|| (fl.isDirectory())) {
-//	                    	event.doit = false;
-//	                    	return;
-//	                    }
-//	                    final String[] files=new String[] {file};
-//	                    event.data=files;
-//	                    event.doit=true;
-//	                } else if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
-//	                	IImageEntry e = (IImageEntry)data;
-//	                	event.data = e.getName();
-//	                }
-//        		}
-            }
-
-            public void dragStart(DragSourceEvent event) {
-                Object data;
-                event.detail = 1;
-                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
-                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
-                    IImageEntry e = (IImageEntry)data;
-                    String file = e.getFile();
-                    this.dataX = new String[]{file};
-                    try {
-                        event.image = e.getImage();
-                    }
-                    catch (IOException e1) {
-                        Activator.log(e1);
-                    }
-                }
-            }
-        });
-        
-//        final IHandlerActivation activation = handlerService
-//        		.activateHandler(IWorkbenchCommandConstants.EDIT_COPY,
-//        		new CopyHandler(items),
-//        		new ControlExpression(items.getControl()));
-//
-//        		// clean up by deactivating the handler. The focus tracker will
-//        		// be removed on dispose automatically
-//        		items.getControl().addDisposeListener(new DisposeListener() {
-//        		@Override
-//        		public void widgetDisposed(DisposeEvent e) {
-//        		handlerService.deactivateHandler(activation);
-//        		}
-//        		});
+        configureDragAndCopy(gallery);
         final IImageEntryCallback cb = new IImageEntryCallback(){
 
 			@Override
@@ -395,6 +408,14 @@ extends ViewPart {
                 ImageCache.removeCallback(cb);
             }
         });
+        gallery.addSelectionListener(new SelectionAdapter() {
+        	
+        	@Override
+        	public void widgetSelected(SelectionEvent e) {
+        		selectionHandler.refresh();
+        	}
+        	
+		});
         item.setData(GROP_RENDERER_TAG, groupRenderer);
 //        gr.setDrawVertically(false);
         groupRenderer.setItemHeight(ITEM_HEIGHT);
@@ -487,6 +508,77 @@ extends ViewPart {
         gallery.setItemCount(imageGroups.size());
     }
 
+    public IImageEntry getSelection() {
+    	CTabItem selectedTab = tabFolder.getSelection();
+    	if (selectedTab != null) {
+    		Gallery gallery = tabGalleries.get(selectedTab);
+    		GalleryItem[] selection = gallery.getSelection();
+    		if (selection.length > 0 && selection[0].getData() instanceof IImageEntry) {
+    			return (IImageEntry) selection[0].getData();
+    		}
+    	}
+		return null;
+    	
+    }
+    
+	private void configureDragAndCopy(final Gallery gallery) {
+		DragSource dragSource = new DragSource((Control)gallery, DND.DROP_COPY);
+        dragSource.setTransfer(new Transfer[]{FileTransfer.getInstance()});
+        dragSource.addDragListener(new DragSourceListener(){
+            private String[] dataX;
+
+            public void dragFinished(DragSourceEvent event) {
+                this.dataX = null;
+            }
+
+            public void dragSetData(DragSourceEvent event) {
+            	if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
+            		event.data = this.dataX;
+            	} else if (TextTransfer.getInstance().isSupportedType(event.dataType) && this.dataX != null && this.dataX[0] != null) {
+                	event.data = new File(this.dataX[0]).getName();
+                } 
+                
+//                Object data;
+//                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
+//                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
+//	                if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
+//	                    IImageEntry e = (IImageEntry)data;
+//	                    String file = e.getFile();
+//	                    File fl = file != null?new File(file):null;
+//						if (fl == null || !(fl.exists()) 
+//	                    		|| (fl.isDirectory())) {
+//	                    	event.doit = false;
+//	                    	return;
+//	                    }
+//	                    final String[] files=new String[] {file};
+//	                    event.data=files;
+//	                    event.doit=true;
+//	                } else if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
+//	                	IImageEntry e = (IImageEntry)data;
+//	                	event.data = e.getName();
+//	                }
+//        		}
+            }
+
+            public void dragStart(DragSourceEvent event) {
+                Object data;
+                event.detail = 1;
+                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
+                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
+                    IImageEntry e = (IImageEntry)data;
+                    String file = e.getFile();
+                    this.dataX = new String[]{file};
+                    try {
+                        event.image = e.getImage();
+                    }
+                    catch (IOException e1) {
+                        Activator.log(e1);
+                    }
+                }
+            }
+        });
+	}
+
     private void refresh(Gallery gallery, ArrayList<ItemGroup> images, HashSet<ItemGroup> expanded, ArrayList<ItemGroup> contents) {
         images.clear();
         int passedCount = 0;
@@ -551,36 +643,7 @@ extends ViewPart {
 
     private void fillContextMenu(final Gallery gallery, final DefaultGalleryGroupRenderer gr) {
         MenuManager manager = new MenuManager();
-        manager.add((IAction)new Action("Copy", 1){
-
-            public void run() {
-                GalleryItem[] selection = gallery.getSelection();
-                boolean av = ImageTransferWrapper.isAvalable();
-                Object[] data = new Object[selection.length * (av ? 3 : 2)];
-                int a = 0;
-                GalleryItem[] arrgalleryItem = selection;
-                int n = arrgalleryItem.length;
-                int n2 = 0;
-                while (n2 < n) {
-                    GalleryItem s = arrgalleryItem[n2];
-                    IImageEntry entry = (IImageEntry)s.getData();
-                    data[a++] = new String[]{entry.getFile()};
-                    data[a++] = entry.getPath();
-                    if (av) {
-                        try {
-                            data[a++] = entry.getImage().getImageData();
-                        }
-                        catch (IOException e) {
-                            Activator.log(e);
-                        }
-                    }
-                    ++n2;
-                }
-                Clipboard clipboard = new Clipboard(Display.getCurrent());
-                clipboard.setContents(data, new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()});
-                clipboard.dispose();
-            }
-        });
+        manager.add(new CopyAction());
         manager.add((IContributionItem)new Separator());
         Action action = new Action("Zoom In", 1){
 
