@@ -93,6 +93,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.TreeEvent;
 import org.eclipse.swt.events.TreeListener;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -119,6 +120,10 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
  */
 public class ImagesViewPart extends ViewPart {
 	
+	private static final String REFRESHER_ID = "refresher";
+	private static final String COLLAPSER_ID = "collapser";
+	private static final int SIZE_STEP = 16;
+
 	private class CopyAction extends Action {
 		
 
@@ -127,55 +132,36 @@ public class ImagesViewPart extends ViewPart {
 		}
 		
 		public void run() {
-			IImageEntry selection = ImagesViewPart.this.getSelection();
-			if (selection == null) {
+			IImageEntry[] selection = ImagesViewPart.this.getSelection();
+			if (selection == null || selection.length == 0) {
 				return;
 			}
-            boolean av = ImageTransferWrapper.isAvalable();
-            Object[] data = new Object[av ? 3 : 2];
-            int a = 0;
-                data[a++] = new String[]{selection.getFile()};
-                data[a++] = selection.getPath();
-                if (av) {
-                    try {
-                        data[a++] = selection.getImage().getImageData();
-                    }
-                    catch (IOException e) {
-                        Activator.log(e);
-                    }
-                }
+            boolean imageTransfer = ImageTransferWrapper.isAvalable();
+            StringBuilder builderData = new StringBuilder();
+            String[] fileData = new String[selection.length];
+            for (int i = 0; i < selection.length; i++) {
+            	fileData[i] = selection[i].getFile();
+            	if (i>=1) {
+            		builderData.append(';');	
+            	}
+            	builderData.append(selection[i].getPath());
+			}
+            ImageData imageData = null; 
+            if (imageTransfer) {
+            	try {
+            		imageData = selection[0].getImage().getImageData();
+            	}
+            	catch (IOException e) {
+            		Activator.log(e);
+            	}
+            }
             Clipboard clipboard = new Clipboard(Display.getCurrent());
-            clipboard.setContents(data, new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()});
+            Object[] contents = imageTransfer?new Object[]{fileData, builderData.toString(), imageData}:new Object[]{fileData, builderData.toString()};
+            Transfer[] transfers = imageTransfer?new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()}:
+            	new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance()};
+			clipboard.setContents(contents, transfers);
             clipboard.dispose();
         }
-		
-//		public void run() {
-//            GalleryItem[] selection = gallery.getSelection();
-//            boolean av = ImageTransferWrapper.isAvalable();
-//            Object[] data = new Object[selection.length * (av ? 3 : 2)];
-//            int a = 0;
-//            GalleryItem[] arrgalleryItem = selection;
-//            int n = arrgalleryItem.length;
-//            int n2 = 0;
-//            while (n2 < n) {
-//                GalleryItem s = arrgalleryItem[n2];
-//                IImageEntry entry = (IImageEntry)s.getData();
-//                data[a++] = new String[]{entry.getFile()};
-//                data[a++] = entry.getPath();
-//                if (av) {
-//                    try {
-//                        data[a++] = entry.getImage().getImageData();
-//                    }
-//                    catch (IOException e) {
-//                        Activator.log(e);
-//                    }
-//                }
-//                ++n2;
-//            }
-//            Clipboard clipboard = new Clipboard(Display.getCurrent());
-//            clipboard.setContents(data, new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), (Transfer)ImageTransferWrapper.getInstance()});
-//            clipboard.dispose();
-//        }
 		
 	}
 	
@@ -276,40 +262,25 @@ public class ImagesViewPart extends ViewPart {
         action2.setImageDescriptor(this.zoomout);
         IActionBars actionBars = this.getViewSite().getActionBars();
         IToolBarManager toolBarManager = actionBars.getToolBarManager();
-        Action colapseA = new Action(){
+        Action colapseAll = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
-                int n = items.length;
-                int n2 = 0;
-                while (n2 < n) {
-                    CTabItem i = items[n2];
-                    Collapser rr = (Collapser)i.getData("ga");
-                    rr.collapse();
-                    ++n2;
-                }
+                setAllExpanded(false);
             }
+
         };
-        Action expand = new Action(){
+        Action expandAll = new Action(){
 
             public void run() {
-                CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
-                int n = items.length;
-                int n2 = 0;
-                while (n2 < n) {
-                    CTabItem i = items[n2];
-                    Collapser rr = (Collapser)i.getData("ga");
-                    rr.expand();
-                    ++n2;
-                }
+            	setAllExpanded(true);
             }
         };
-        expand.setText("Expand All");
-        expand.setImageDescriptor(this.expand);
-        colapseA.setText("Collapse All");
-        colapseA.setImageDescriptor(this.collapse);
-        toolBarManager.add((IAction)expand);
-        toolBarManager.add((IAction)colapseA);
+        expandAll.setText("Expand All");
+        expandAll.setImageDescriptor(this.expand);
+        colapseAll.setText("Collapse All");
+        colapseAll.setImageDescriptor(this.collapse);
+        toolBarManager.add((IAction)expandAll);
+        toolBarManager.add((IAction)colapseAll);
         toolBarManager.add((IContributionItem)new Separator());
         toolBarManager.add((IAction)action);
         toolBarManager.add((IAction)action2);
@@ -331,6 +302,23 @@ public class ImagesViewPart extends ViewPart {
         
         getSite().setSelectionProvider(selectionHandler);
     }
+    
+	private void setAllExpanded(boolean expanded) {
+		CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
+        int n = items.length;
+        int n2 = 0;
+        while (n2 < n) {
+            CTabItem i = items[n2];
+            Collapser rr = (Collapser)i.getData(COLLAPSER_ID);
+            if (expanded) {
+            	rr.expand();
+            } else {
+            	rr.collapse();
+            }
+            ++n2;
+        }
+	}
+
 
     protected void refilter(Text textFilter2) {
         this.pattern = textFilter2.getText();
@@ -339,7 +327,7 @@ public class ImagesViewPart extends ViewPart {
         int n2 = 0;
         while (n2 < n) {
             CTabItem i = items[n2];
-            Refresher rr = (Refresher)i.getData("r");
+            Refresher rr = (Refresher)i.getData(REFRESHER_ID);
             rr.refresh();
             ++n2;
         }
@@ -348,9 +336,9 @@ public class ImagesViewPart extends ViewPart {
     private void configureTab(final IImageStore store, CTabFolder fld) {
         CTabItem item = new CTabItem(fld, SWT.NONE);
         item.setText(store.getName());
-        Composite cm = new Composite((Composite)fld, 0);
+        Composite cm = new Composite((Composite)fld, SWT.NONE);
         cm.setLayout((Layout)new FillLayout());
-        final Gallery gallery = new Gallery(cm, 268438016 | SWT.V_SCROLL);
+        final Gallery gallery = new Gallery(cm, 268438016 | SWT.V_SCROLL | SWT.MULTI);
         tabGalleries.put(item, gallery);
         item.setControl((Control)cm);
 //        gallery.setVertical(false);
@@ -373,16 +361,6 @@ public class ImagesViewPart extends ViewPart {
         		super.draw(gc, item, index, x, y, width, height);
         	}
 
-//            protected Image getImage(GalleryItem item) {
-//                IImageEntry entry = (IImageEntry)item.getData();
-//                try {
-//                    return ImageCache.getImage(entry);
-//                }
-//                catch (Exception e) {
-//                    Activator.log(e);
-//                    return null;
-//                }
-//            }
         });
         configureDragAndCopy(gallery);
         final IImageEntryCallback cb = new IImageEntryCallback(){
@@ -446,7 +424,7 @@ public class ImagesViewPart extends ViewPart {
             }
         });
         final HashSet<ItemGroup> expanded = new HashSet<>();
-        item.setData("ga", new Collapser(){
+        item.setData(COLLAPSER_ID, new Collapser(){
 
             public void collapse() {
                 int a = 0;
@@ -491,7 +469,7 @@ public class ImagesViewPart extends ViewPart {
             }
 
         };
-        item.setData("r", (Object)new Refresher(){
+        item.setData(REFRESHER_ID, (Object)new Refresher(){
 
             public void refresh() {
                 ArrayList<ItemGroup> contents = new ArrayList<>(store.getContents());
@@ -508,13 +486,17 @@ public class ImagesViewPart extends ViewPart {
         gallery.setItemCount(imageGroups.size());
     }
 
-    public IImageEntry getSelection() {
+    public IImageEntry[] getSelection() {
     	CTabItem selectedTab = tabFolder.getSelection();
     	if (selectedTab != null) {
     		Gallery gallery = tabGalleries.get(selectedTab);
     		GalleryItem[] selection = gallery.getSelection();
     		if (selection.length > 0 && selection[0].getData() instanceof IImageEntry) {
-    			return (IImageEntry) selection[0].getData();
+    			IImageEntry[] result = new IImageEntry[selection.length];
+    			for (int i = 0; i < result.length; i++) {
+					result[i] = (IImageEntry) selection[i].getData(); 
+				}
+    			return result;
     		}
     	}
 		return null;
@@ -672,8 +654,8 @@ public class ImagesViewPart extends ViewPart {
         int itemHeight = gr.getItemHeight();
         int itemWidth = gr.getItemWidth();
         if (itemHeight > 40 && itemWidth > ITEM_HEIGHT) {
-            itemHeight -= 16;
-            itemWidth -= 16;
+            itemHeight -= SIZE_STEP;
+            itemWidth -= SIZE_STEP;
         }
         gr.setItemSize(itemWidth, itemHeight);
     }
@@ -682,8 +664,8 @@ public class ImagesViewPart extends ViewPart {
         int itemHeight = gr.getItemHeight();
         int itemWidth = gr.getItemWidth();
         if (itemHeight < 128) {
-            itemHeight += 16;
-            itemWidth += 16;
+            itemHeight += SIZE_STEP;
+            itemWidth += SIZE_STEP;
         }
         gr.setItemSize(itemWidth, itemHeight);
     }
