@@ -1,5 +1,4 @@
-# com.onpositive.pictureviewer
-#Image/picture viewer plugin for Eclipse
+# com.onpositive.pictureviewer - Image/picture viewer plugin for Eclipse
 
 By **OnPositive**
 
