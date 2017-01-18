@@ -11,5 +11,11 @@ By **OnPositive**
 - Filter images by file name
 - Copy images (using Ctrl+C/Copy action) to some location inside your Eclipse workspace, as well as outside it - using your File Manager/file browser
 
+## Installation
+
+Please use the following update site URL to install Pictureviewer plugin into Eclipse: https://32kda.github.io/com.onpositive.pictureviewer/
+
 ### License
 Plug-in is licensed under [EPL](http://www.eclipse.org/legal/epl-v10.html)
+
+
