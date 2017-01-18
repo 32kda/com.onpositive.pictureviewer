@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="com.onpositive.pictureviewer.feature"
+      label="Picture Viewer Feature"
+      version="1.1.0.qualifier"
+      provider-name="OnPositive">
+
+   <description url="http://www.example.com/description">
+      Image/picture viewer plugin for Eclipse. Support viewing all images present in Target Platform and Worskpace with 
+      sorting/quick search, copying to workspace or file system etc.
+   </description>
+
+   <copyright url="http://http://www.onpositive.com/onpositive/index.html">
+      OnPositive
+   </copyright>
+
+   <license url="https://www.eclipse.org/legal/epl-v10.html">
+      This software is licensed under EPL v 1.0
+      The Eclipse Public License is designed to be a business-friendly free software license, and features weaker copyleft provisions than licenses such as the GNU General Public License.
+   </license>
+
+   <plugin
+         id="com.onpositive.pictureviewer"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>
