@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.onpositive.pictureviewer.feature_1.1.0.201701182048.jar" id="com.onpositive.pictureviewer.feature" version="1.1.0.201701182048">
-      <category name="com.onpositive.pictureviewer.category"/>
+   <feature url="features/com.onpositive.pictureviewer.feature_1.1.0.201701191900.jar" id="com.onpositive.pictureviewer.feature" version="1.1.0.201701191900">
+      <category name="Pictureviewer"/>
    </feature>
-   <category-def name="com.onpositive.pictureviewer.category" label="Picture Viewer Category"/>
+   <category-def name="Pictureviewer" label="Picture Viewer Category"/>
 </site>

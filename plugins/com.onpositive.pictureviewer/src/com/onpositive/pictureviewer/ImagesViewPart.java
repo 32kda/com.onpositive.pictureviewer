@@ -82,6 +82,7 @@ import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
 import org.eclipse.swt.dnd.FileTransfer;
+import org.eclipse.swt.dnd.ImageTransfer;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.DisposeEvent;
@@ -505,57 +506,63 @@ public class ImagesViewPart extends ViewPart {
     
 	private void configureDragAndCopy(final Gallery gallery) {
 		DragSource dragSource = new DragSource((Control)gallery, DND.DROP_COPY);
-        dragSource.setTransfer(new Transfer[]{FileTransfer.getInstance()});
+        dragSource.setTransfer(new Transfer[]{FileTransfer.getInstance(), TextTransfer.getInstance(), ImageTransfer.getInstance()});
         dragSource.addDragListener(new DragSourceListener(){
             private String[] dataX;
+            private ImageData imgData;
 
             public void dragFinished(DragSourceEvent event) {
                 this.dataX = null;
+                this.imgData = null;
             }
 
             public void dragSetData(DragSourceEvent event) {
-            	if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
-            		event.data = this.dataX;
-            	} else if (TextTransfer.getInstance().isSupportedType(event.dataType) && this.dataX != null && this.dataX[0] != null) {
-                	event.data = new File(this.dataX[0]).getName();
-                } 
-                
-//                Object data;
-//                GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
-//                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
-//	                if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
-//	                    IImageEntry e = (IImageEntry)data;
-//	                    String file = e.getFile();
-//	                    File fl = file != null?new File(file):null;
-//						if (fl == null || !(fl.exists()) 
-//	                    		|| (fl.isDirectory())) {
-//	                    	event.doit = false;
-//	                    	return;
-//	                    }
-//	                    final String[] files=new String[] {file};
-//	                    event.data=files;
-//	                    event.doit=true;
-//	                } else if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
-//	                	IImageEntry e = (IImageEntry)data;
-//	                	event.data = e.getName();
-//	                }
-//        		}
+            	if (this.dataX != null && this.dataX[0] != null) {
+	            	if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
+	            		event.data = this.dataX;
+	            	} else if (TextTransfer.getInstance().isSupportedType(event.dataType)) {
+	                	event.data = new File(this.dataX[0]).getName();
+	                } else if (ImageTransfer.getInstance().isSupportedType(event.dataType) && event.image != null) {
+	                	event.data = imgData;
+	                } 
+            	}
             }
 
             public void dragStart(DragSourceEvent event) {
                 Object data;
-                event.detail = 1;
+                event.detail = DND.DROP_COPY;
                 GalleryItem item2 = gallery.getItem(new Point(event.x, event.y));
-                if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
+                IImageEntry[] selection = getSelection();
+                if (selection != null && selection.length > 0) {
+                	try {
+                        event.image = selection[0].getImage();
+                        if (event.image != null) {
+                        	imgData = event.image.getImageData();
+                        }
+                    }
+                    catch (IOException e1) {
+                        Activator.log(e1);
+                    }
+                	this.dataX = new String[selection.length];
+                	for (int i = 0; i < selection.length; i++) {
+                		this.dataX[i] = selection[i].getFile();
+					}
+                } else if (item2 != null && (data = item2.getData()) instanceof IImageEntry) {
                     IImageEntry e = (IImageEntry)data;
                     String file = e.getFile();
                     this.dataX = new String[]{file};
                     try {
                         event.image = e.getImage();
+                        if (event.image != null) {
+                        	imgData = event.image.getImageData();
+                        }
+
                     }
                     catch (IOException e1) {
                         Activator.log(e1);
                     }
+                } else {
+                	event.doit = false;
                 }
             }
         });
