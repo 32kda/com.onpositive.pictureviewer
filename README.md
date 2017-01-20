@@ -14,6 +14,8 @@ By **OnPositive**
 ## Installation
 
 Please use the following update site URL to install Pictureviewer plugin into Eclipse: https://32kda.github.io/com.onpositive.pictureviewer/
+If installation fails - you can try removing *com.onpositive.pictureviewer.jar* from %eclipse installation%/plugins folder and launching Eclipse from console, 
+using *eclipse -clean* command. After that - try to install it using update site above, as usual.
 
 ### License
 Plug-in is licensed under [EPL](http://www.eclipse.org/legal/epl-v10.html)
