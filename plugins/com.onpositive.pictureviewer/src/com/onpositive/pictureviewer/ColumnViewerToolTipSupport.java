@@ -14,7 +14,6 @@
  */
 package com.onpositive.pictureviewer;
 
-import com.onpositive.pictureviewer.DefaultToolTip;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Point;
@@ -23,7 +22,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
-import org.eclipse.swt.widgets.Widget;
 
 public class ColumnViewerToolTipSupport
 extends DefaultToolTip {
@@ -31,9 +29,9 @@ extends DefaultToolTip {
 	private static final int POPUP_HIDE_DELAY = 400;
 	private Viewer viewer;
     private Control tree;
-    private static final String VIEWER_CELL_KEY = "org.eclipse.jface_VIEWER_CELL_KEY";
-    private static final int DEFAULT_SHIFT_X = 10;
-    private static final int DEFAULT_SHIFT_Y = 0;
+//    private static final String VIEWER_CELL_KEY = "org.eclipse.jface_VIEWER_CELL_KEY";
+//    private static final int DEFAULT_SHIFT_X = 10;
+//    private static final int DEFAULT_SHIFT_Y = 0;
 
     protected ColumnViewerToolTipSupport(Viewer viewer, int style, boolean manualActivation) {
         super(viewer.getControl(), style, manualActivation);

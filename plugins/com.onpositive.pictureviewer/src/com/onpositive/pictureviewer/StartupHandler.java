@@ -170,7 +170,7 @@ implements IStartup {
             IViewReference v = references[n2];
             String id = v.getId();
             if (this.accept(id)) {
-                System.out.println("Found");
+//                System.out.println("Found");
                 IWorkbenchPart part = v.getPart(false);
                 if (part != null) {
                     this.initPart(part);
@@ -317,7 +317,7 @@ implements IStartup {
         protected Image getImage(Event event) {
             TreeItem item = this.invoke.getItem(new Point(event.x, event.y));
             Object data = item.getData();
-            System.out.println(data);
+//            System.out.println(data);
             if (data instanceof IFile) {
                 IFile fs = (IFile)data;
                 try {

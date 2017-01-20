@@ -22,7 +22,7 @@ public class ImageCache {
 
 		@Override
 		public void run() {
-			List<GalleryItem> toUpdate = new ArrayList();
+			List<GalleryItem> toUpdate = new ArrayList<GalleryItem>();
 			synchronized (ImageCache.class) {
 				List<IImageEntry> toLoad = new ArrayList<>();
 				toLoad.addAll(loadedStack);
@@ -161,7 +161,7 @@ public class ImageCache {
 		images.clear();
 	}
 
-	private static void notifyLoad(List<GalleryItem> toUpdate) {
+	private static void notifyLoad(final List<GalleryItem> toUpdate) {
 		Display.getDefault().asyncExec(new Runnable() {
 			public void run() {
 				for (IImageEntryCallback c : ImageCache.callbacks)

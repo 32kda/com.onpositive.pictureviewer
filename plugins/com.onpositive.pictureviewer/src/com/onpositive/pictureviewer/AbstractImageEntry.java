@@ -10,23 +10,14 @@ import com.onpositive.pictureviewer.IStoreImageListener;
 import com.onpositive.pictureviewer.ItemGroup;
 import com.onpositive.pictureviewer.JarImageEntry;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import org.apache.commons.io.FileUtils;
-import org.eclipse.core.internal.utils.FileUtil;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.NullProgressMonitor;
 
 /*
  * This class specifies class file version 49.0 but uses Java 6 signatures.  Assumed Java 6.
@@ -112,28 +103,28 @@ implements IImageStore {
         this.fireChanged();
     }
 
-    private void saveGroup(ItemGroup group) {
-    	String name = group.getName();
-    	name = new File(name).getName();
-    	int idx = name.indexOf('_');
-    	if (idx > 0) {
-    		name = name.substring(0, idx);
-    	}
-    	File dir = new File("D:\\tmp\\images" , name);
-    	dir.mkdirs();
-    	for (int i = 0; i < group.getChildCount(); i++) {
-			IImageEntry image = group.getImage(i);
-			try {
-				String fileName = image.getFile();
-				File srcFile = new File(fileName);
-				FileUtils.copyFile(srcFile, new File(dir, srcFile.getName()));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		
-	}
+//    private void saveGroup(ItemGroup group) {
+//    	String name = group.getName();
+//    	name = new File(name).getName();
+//    	int idx = name.indexOf('_');
+//    	if (idx > 0) {
+//    		name = name.substring(0, idx);
+//    	}
+//    	File dir = new File("D:\\tmp\\images" , name);
+//    	dir.mkdirs();
+//    	for (int i = 0; i < group.getChildCount(); i++) {
+//			IImageEntry image = group.getImage(i);
+//			try {
+//				String fileName = image.getFile();
+//				File srcFile = new File(fileName);
+//				FileUtils.copyFile(srcFile, new File(dir, srcFile.getName()));
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		
+//	}
 
 	private synchronized void fireChanged() {
         for (IStoreImageListener l : this.images) {
@@ -141,7 +132,7 @@ implements IImageStore {
         }
     }
 
-    private void parse(ArrayList ls, File f, File root) {
+    private void parse(ArrayList<IImageEntry> ls, File f, File root) {
         if (f.getName().endsWith(".jar")) {
             try {
                 JarFile jar = new JarFile(f);
@@ -172,7 +163,7 @@ implements IImageStore {
         }
     }
 
-    private void process(ArrayList<Object> ls, JarFile jar, File f) {
+    private void process(ArrayList<IImageEntry> ls, JarFile jar, File f) {
         Enumeration<JarEntry> entries = jar.entries();
         while (entries.hasMoreElements()) {
             JarEntry e = entries.nextElement();

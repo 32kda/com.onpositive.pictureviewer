@@ -287,7 +287,7 @@ public class ImagesViewPart extends ViewPart {
         toolBarManager.add((IAction)action2);
         actionBars.updateActionBars();
         
-        IHandlerService handlerService = (IHandlerService) (getSite()).getService(IHandlerService.class);
+        final IHandlerService handlerService = (IHandlerService) (getSite()).getService(IHandlerService.class);
         final IHandlerActivation activation = handlerService
         		.activateHandler(IWorkbenchCommandConstants.EDIT_COPY,
         		new ActionHandler(new CopyAction()));
@@ -460,7 +460,7 @@ public class ImagesViewPart extends ViewPart {
         final IStoreImageListener storeImageListener = new IStoreImageListener(){
 
             public void platformChanged() {
-            	ArrayList<ItemGroup> contents = new ArrayList<>(store.getContents());
+            	final ArrayList<ItemGroup> contents = new ArrayList<>(store.getContents());
                 Display.getDefault().asyncExec(new Runnable(){
 
                     public void run() {
