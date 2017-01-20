@@ -8,7 +8,7 @@
             class="com.onpositive.pictureviewer.ImagesViewPart"
             icon="icons/palette_layout.gif"
             id="com.onpositive.pictureviewer.imagesView"
-            name="Images">
+            name="Pictures\Images viewer">
       </view>
    </extension>
    <extension
