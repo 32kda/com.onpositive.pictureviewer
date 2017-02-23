@@ -25,7 +25,7 @@ import java.util.jar.JarFile;
  */
 public abstract class AbstractImageStore
 implements IImageStore {
-    HashSet<IStoreImageListener> images = new HashSet<IStoreImageListener>();
+    protected HashSet<IStoreImageListener> storeListeners = new HashSet<IStoreImageListener>();
     protected ArrayList<ItemGroup> imageList = new ArrayList<ItemGroup>();
 
     @Override
@@ -43,7 +43,7 @@ implements IImageStore {
         s.start();
     }
 
-    synchronized void reprocess(HashSet<String> names) {
+    protected synchronized void reprocess(HashSet<String> names) {
         File file = this.getFile();
         HashSet<ItemGroup> toRemove = new HashSet<ItemGroup>();
         HashSet<ItemGroup> toAdd = new HashSet<ItemGroup>();
@@ -80,21 +80,19 @@ implements IImageStore {
         if (file != null && file.exists()) {
             File[] listFiles = file.listFiles();
             int n = listFiles.length;
-            int n2 = 0;
-            while (n2 < n) {
-                File curFile = listFiles[n2];
-                if (curFile.getName().charAt(0) != '.') {
-                    ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
-                    ItemGroup group = new ItemGroup(curFile.getName(), entries);
-                    this.parse(entries, curFile, curFile);
-                    if (group.getChildCount() > 0) {
-                        this.fetched(group);
-                    }
-                }
-                ++n2;
-            }
+            for (int i = 0; i < n; i++) {
+            	File curFile = listFiles[i];
+            	if (curFile.getName().charAt(0) != '.') {
+            		ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+            		ItemGroup group = new ItemGroup(curFile.getName(), entries);
+            		this.parse(entries, curFile, curFile);
+            		if (group.getChildCount() > 0) {
+            			this.fetched(group);
+            		}
+            	}
+			}
         }
-        this.fireChanged();
+        this.fireChanged(); 
     }
 
     private synchronized void fetched(ItemGroup group) {
@@ -103,7 +101,7 @@ implements IImageStore {
     }
 
 	private synchronized void fireChanged() {
-        for (IStoreImageListener l : this.images) {
+        for (IStoreImageListener l : this.storeListeners) {
             l.platformChanged();
         }
     }
@@ -165,12 +163,12 @@ implements IImageStore {
 
     @Override
     public synchronized void addListener(IStoreImageListener e) {
-        this.images.add(e);
+        this.storeListeners.add(e);
     }
 
     @Override
     public synchronized void removeListener(IStoreImageListener e) {
-        this.images.remove(e);
+        this.storeListeners.remove(e);
     }
     
 	public static void saveGroup(ItemGroup group, String folder) {

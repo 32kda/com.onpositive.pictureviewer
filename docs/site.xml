@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.onpositive.pictureviewer.feature_1.1.0.201701201831.jar" id="com.onpositive.pictureviewer.feature">
+   <feature url="features/com.onpositive.pictureviewer.feature_1.1.0.qualifier.jar" id="com.onpositive.pictureviewer.feature">
       <category name="Pictureviewer"/>
    </feature>
    <category-def name="Pictureviewer" label="Picture Viewer Category"/>

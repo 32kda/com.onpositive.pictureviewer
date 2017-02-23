@@ -55,5 +55,10 @@ public class ItemGroup {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "ItemGroup [name=" + name + "]";
+	}
 }
 

@@ -40,7 +40,8 @@ implements IImageStore {
 				
 				@Override
 				public void preferenceChange(PreferenceChangeEvent event) {
-					if (event.getKey().equals("workspace_target_handle")) { //Was "platform_path" before
+					if (event.getKey().equals("workspace_target_handle") &&
+							event.getNewValue() != "") { //Was "platform_path" before
 	                    PlatformImages.this.initPlatform();
 	                }
 				}

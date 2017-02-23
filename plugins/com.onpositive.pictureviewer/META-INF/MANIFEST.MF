@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Pictureviewer Plug-in
 Bundle-SymbolicName: com.onpositive.pictureviewer;singleton:=true
-Bundle-Version: 1.1.0.qualifier
+Bundle-Version: 1.1.1.qualifier
 Bundle-Activator: com.onpositive.pictureviewer.Activator
 Bundle-Vendor: ONPOSITIVE
 Require-Bundle: org.eclipse.core.runtime,
