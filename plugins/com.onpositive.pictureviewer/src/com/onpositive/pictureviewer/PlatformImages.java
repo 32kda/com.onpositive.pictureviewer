@@ -10,48 +10,42 @@
  */
 package com.onpositive.pictureviewer;
 
-import com.onpositive.pictureviewer.AbstractImageEntry;
-import com.onpositive.pictureviewer.IImageStore;
 import java.io.File;
+import java.net.URISyntaxException;
+
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.pde.core.plugin.TargetPlatform;
 import org.eclipse.pde.internal.core.PDECore;
 
 @SuppressWarnings("restriction")
 public class PlatformImages
-extends AbstractImageEntry
+extends AbstractImageStore
 implements IImageStore {
+	private static final boolean HAS_PDE = Platform.getBundle("org.eclipse.pde.core") != null;
     private String location;
     private static PlatformImages instance;
 
     public String getName() {
-        return "Target Platform";
+        return HAS_PDE?"Target Platform":"Eclipse";
     }
 
     private PlatformImages() {
-    	IEclipsePreferences node = InstanceScope.INSTANCE.getNode(PDECore.PLUGIN_ID);
-    	node.addPreferenceChangeListener(new IPreferenceChangeListener() {
-			
-			@Override
-			public void preferenceChange(PreferenceChangeEvent event) {
-				if (event.getKey().equals("platform_path")) {
-                    PlatformImages.this.initPlatform();
-                }
-			}
-		});
-//        Preferences preferences = PDECore.getDefault().getPluginPreferences();
-//        Preferences.IPropertyChangeListener propertyChangeListener = new Preferences.IPropertyChangeListener(){
-//
-//            public void propertyChange(Preferences.PropertyChangeEvent event) {
-//                if (event.getProperty().equals("platform_path")) {
-//                    PlatformImages.this.initPlatform();
-//                }
-//            }
-//        };
-//        preferences.addPropertyChangeListener(propertyChangeListener);
+    	if (HAS_PDE) {
+	    	IEclipsePreferences node = InstanceScope.INSTANCE.getNode(PDECore.PLUGIN_ID);
+	    	node.addPreferenceChangeListener(new IPreferenceChangeListener() {
+				
+				@Override
+				public void preferenceChange(PreferenceChangeEvent event) {
+					if (event.getKey().equals("workspace_target_handle")) { //Was "platform_path" before
+	                    PlatformImages.this.initPlatform();
+	                }
+				}
+			});
+    	}
         this.init();
     }
 
@@ -63,9 +57,22 @@ implements IImageStore {
     }
 
     public File getFile() {
-        this.location = TargetPlatform.getLocation();
-        File file = new File(this.location, "plugins");
-        return file;
+    	if (HAS_PDE) {
+    		this.location = TargetPlatform.getLocation();
+    		File file = new File(this.location, "plugins");
+    		return file;
+    	}
+		try {
+			File installation = new File(Platform.getInstallLocation().getURL().toURI());
+			File pluginDir = new File(installation, "plugins");
+			if (pluginDir.exists()) {
+				return pluginDir;
+			}
+		} catch (URISyntaxException e) {
+			//Should not happen
+			Activator.log(e);
+		}
+		return null;
     }
 
 }

@@ -12,6 +12,7 @@ import com.onpositive.pictureviewer.JarImageEntry;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -22,7 +23,7 @@ import java.util.jar.JarFile;
 /*
  * This class specifies class file version 49.0 but uses Java 6 signatures.  Assumed Java 6.
  */
-public abstract class AbstractImageEntry
+public abstract class AbstractImageStore
 implements IImageStore {
     HashSet<IStoreImageListener> images = new HashSet<IStoreImageListener>();
     protected ArrayList<ItemGroup> imageList = new ArrayList<ItemGroup>();
@@ -36,35 +37,34 @@ implements IImageStore {
         Thread s = new Thread(){
 
             public void run() {
-                AbstractImageEntry.this.initPlatform();
+                AbstractImageStore.this.initPlatform();
             }
         };
         s.start();
     }
 
-    synchronized void reprocess(HashSet<String> str) {
+    synchronized void reprocess(HashSet<String> names) {
         File file = this.getFile();
         HashSet<ItemGroup> toRemove = new HashSet<ItemGroup>();
         HashSet<ItemGroup> toAdd = new HashSet<ItemGroup>();
-        for (Object s2 : this.imageList) {
-            ItemGroup z = (ItemGroup)s2;
-            if (!str.contains(z.getName())) continue;
-            toRemove.add(z);
-            str.remove(z.getName());
-            ArrayList<IImageEntry> za = new ArrayList<IImageEntry>();
-            ItemGroup newF = new ItemGroup(z.getName(), za);
-            File file2 = new File(file, z.getName());
-            this.parse(za, file2, file2);
-            if (za.isEmpty()) continue;
-            toAdd.add(newF);
+        for (ItemGroup currentGroup : this.imageList) {
+            if (!names.contains(currentGroup.getName())) continue;
+            toRemove.add(currentGroup);
+            names.remove(currentGroup.getName());
+            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+            ItemGroup newGroup = new ItemGroup(currentGroup.getName(), entries);
+            File file2 = new File(file, currentGroup.getName());
+            this.parse(entries, file2, file2);
+            if (entries.isEmpty()) continue;
+            toAdd.add(newGroup);
         }
-        for (String s : str) {
-            ArrayList<IImageEntry> za = new ArrayList<IImageEntry>();
-            ItemGroup newF = new ItemGroup(s, za);
-            File file2 = new File(file, s);
-            this.parse(za, file2, file2);
-            if (za.isEmpty()) continue;
-            toAdd.add(newF);
+        for (String name : names) {
+            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+            ItemGroup newGroup = new ItemGroup(name, entries);
+            File file2 = new File(file, name);
+            this.parse(entries, file2, file2);
+            if (entries.isEmpty()) continue;
+            toAdd.add(newGroup);
         }
         this.imageList.removeAll(toRemove);
         this.imageList.addAll(toAdd);
@@ -99,32 +99,8 @@ implements IImageStore {
 
     private synchronized void fetched(ItemGroup group) {
         this.imageList.add(group);
-//        saveGroup(group);
         this.fireChanged();
     }
-
-//    private void saveGroup(ItemGroup group) {
-//    	String name = group.getName();
-//    	name = new File(name).getName();
-//    	int idx = name.indexOf('_');
-//    	if (idx > 0) {
-//    		name = name.substring(0, idx);
-//    	}
-//    	File dir = new File("D:\\tmp\\images" , name);
-//    	dir.mkdirs();
-//    	for (int i = 0; i < group.getChildCount(); i++) {
-//			IImageEntry image = group.getImage(i);
-//			try {
-//				String fileName = image.getFile();
-//				File srcFile = new File(fileName);
-//				FileUtils.copyFile(srcFile, new File(dir, srcFile.getName()));
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-//		
-//	}
 
 	private synchronized void fireChanged() {
         for (IStoreImageListener l : this.images) {
@@ -155,7 +131,7 @@ implements IImageStore {
                     ++n2;
                 }
             }
-        } else if (AbstractImageEntry.isImage(f.getName())) {
+        } else if (AbstractImageStore.isImage(f.getName())) {
             int length = root.getAbsolutePath().length() + 1;
             String absolutePath = f.getAbsolutePath();
             absolutePath = absolutePath.replace('\\', '/');
@@ -169,7 +145,7 @@ implements IImageStore {
             JarEntry e = entries.nextElement();
             String name2 = e.getName();
             String name = name2;
-            if (!AbstractImageEntry.isImage(name)) continue;
+            if (!AbstractImageStore.isImage(name)) continue;
             String nm = name2;
             int lastIndexOf = nm.lastIndexOf('/');
             if (lastIndexOf > -1) {
@@ -196,6 +172,32 @@ implements IImageStore {
     public synchronized void removeListener(IStoreImageListener e) {
         this.images.remove(e);
     }
+    
+	public static void saveGroup(ItemGroup group, String folder) {
+		String name = group.getName();
+		name = new File(name).getName();
+		int idx = name.indexOf('_');
+		if (idx > 0) {
+			name = name.substring(0, idx);
+		}
+		File dir = new File(folder, name);
+		dir.mkdirs();
+		for (int i = 0; i < group.getChildCount(); i++) {
+			IImageEntry image = group.getImage(i);
+			String fileName = image.getFile();
+			File srcFile = new File(fileName);
+			File destFile = new File(dir, srcFile.getName());
+			if (!destFile.exists()) {
+				try  
+				{
+					Files.copy(new File(fileName).toPath(), destFile.toPath());
+				} catch (IOException e) {
+					Activator.log(e);
+				}
+			}
+		}
+
+	}
 
 }
 

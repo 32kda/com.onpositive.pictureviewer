@@ -38,7 +38,7 @@
  */
 package com.onpositive.pictureviewer;
 
-import com.onpositive.pictureviewer.AbstractImageEntry;
+import com.onpositive.pictureviewer.AbstractImageStore;
 import com.onpositive.pictureviewer.Activator;
 import com.onpositive.pictureviewer.ColumnViewerToolTipSupport;
 import java.lang.reflect.Method;
@@ -269,7 +269,7 @@ implements IStartup {
             if (data instanceof IFile) {
                 IFile fs = (IFile)data;
                 String name2 = fs.getName();
-                boolean image = AbstractImageEntry.isImage(name2);
+                boolean image = AbstractImageStore.isImage(name2);
                 return image;
             }
             return false;
@@ -317,7 +317,6 @@ implements IStartup {
         protected Image getImage(Event event) {
             TreeItem item = this.invoke.getItem(new Point(event.x, event.y));
             Object data = item.getData();
-//            System.out.println(data);
             if (data instanceof IFile) {
                 IFile fs = (IFile)data;
                 try {
@@ -345,15 +344,6 @@ implements IStartup {
             return "";
         }
 
-//        static /* synthetic */ void access$0(MC mC, Image image) {
-//            mC.ima = image;
-//        }
-//
-//        /* synthetic */ MC(StartupHandler startupHandler, Viewer viewer, int n, boolean bl, TreeViewer treeViewer, MC mC) {
-//            MC mC2;
-//            mC2(startupHandler, viewer, n, bl, treeViewer);
-//        }
-//
     }
 
 }
