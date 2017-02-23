@@ -61,7 +61,7 @@
             categoryId="com.onpositive.pictureviewer.commands.category"
             id="com.onpositive.pictureviewer.commands.saveAllCommand"
             name="Save All Icons"
-            description="Highly experimental; Use at your own risk">
+            description="Save all images/icons from Target/Running Platform. Highly experimental; Use at your own risk">
       </command>
    </extension>
    <extension
