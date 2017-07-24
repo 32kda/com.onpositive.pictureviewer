@@ -851,7 +851,7 @@ public class Gallery extends Canvas {
 	 *            selection listeners.
 	 * 
 	 */
-	protected void setSelected(GalleryItem item, boolean selected,
+	public void setSelected(GalleryItem item, boolean selected,
 			boolean notifyListeners) {
 		if (selected) {
 			if (!isSelected(item)) {

@@ -52,6 +52,7 @@ package com.onpositive.pictureviewer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -171,16 +172,18 @@ public class ImagesViewPart extends ViewPart {
 	private static final String GROP_RENDERER_TAG = "g";
 	private static final int EXPAND_THRESHOLD = 20;
 	private DefaultToolTip tooltip;
-    ImageDescriptor zoom = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/zoom_in.gif");
-    ImageDescriptor zoomout = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/zoom_out.gif");
-    ImageDescriptor clearCo = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/clear_co.gif");
-    ImageDescriptor collapse = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/collapseall.gif");
-    ImageDescriptor expand = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/expandall.gif");
+	private ImageDescriptor zoom = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/zoom_in.gif");
+	private ImageDescriptor zoomout = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/zoom_out.gif");
+	private ImageDescriptor clearCo = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/clear_co.gif");
+	private ImageDescriptor collapse = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/collapseall.gif");
+	private ImageDescriptor expand = AbstractUIPlugin.imageDescriptorFromPlugin((String)"com.onpositive.pictureviewer", (String)"/icons/expandall.gif");
     private Text textFilter;
     private CTabFolder tabFolder;
     private String pattern;
     private Map<CTabItem, Gallery> tabGalleries = new HashMap<>();
-    private SelectionProviderAdapter selectionHandler = new SelectionProviderAdapter(this); 
+    private SelectionProviderAdapter selectionHandler = new SelectionProviderAdapter(this);
+    
+	private List<IImageEntry> currentSelection; //A hack to preserve selection while async loading images; Unfortunately Nebula Gallery does not support this itself 
 
     public void dispose() {
         this.tooltip.hide();
@@ -228,7 +231,7 @@ public class ImagesViewPart extends ViewPart {
         	}
         	
 		});
-        Action action = new Action(){
+        Action zoomInAction = new Action(){
 
             public void run() {
                 CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
@@ -243,9 +246,9 @@ public class ImagesViewPart extends ViewPart {
             }
         };
         this.tabFolder.setLayoutData((Object)new GridData(1808));
-        action.setText("Zoom In");
-        action.setImageDescriptor(this.zoom);
-        Action action2 = new Action(){
+        zoomInAction.setText("Zoom In");
+        zoomInAction.setImageDescriptor(this.zoom);
+        Action zoomOutAction = new Action(){
 
             public void run() {
                 CTabItem[] items = ImagesViewPart.this.tabFolder.getItems();
@@ -259,8 +262,8 @@ public class ImagesViewPart extends ViewPart {
                 }
             }
         };
-        action2.setText("Zoom Out");
-        action2.setImageDescriptor(this.zoomout);
+        zoomOutAction.setText("Zoom Out");
+        zoomOutAction.setImageDescriptor(this.zoomout);
         IActionBars actionBars = this.getViewSite().getActionBars();
         IToolBarManager toolBarManager = actionBars.getToolBarManager();
         Action colapseAll = new Action(){
@@ -283,8 +286,8 @@ public class ImagesViewPart extends ViewPart {
         toolBarManager.add((IAction)expandAll);
         toolBarManager.add((IAction)colapseAll);
         toolBarManager.add((IContributionItem)new Separator());
-        toolBarManager.add((IAction)action);
-        toolBarManager.add((IAction)action2);
+        toolBarManager.add((IAction)zoomInAction);
+        toolBarManager.add((IAction)zoomOutAction);
         actionBars.updateActionBars();
         
         final IHandlerService handlerService = (IHandlerService) (getSite()).getService(IHandlerService.class);
@@ -391,6 +394,7 @@ public class ImagesViewPart extends ViewPart {
         	
         	@Override
         	public void widgetSelected(SelectionEvent e) {
+        		currentSelection = null;
         		selectionHandler.refresh();
         	}
         	
@@ -421,6 +425,9 @@ public class ImagesViewPart extends ViewPart {
                     IImageEntry image = ga.getImage(indexOf);
                     item.setText(image.getName());
                     item.setData((Object)image);
+                    if (currentSelection != null && currentSelection.contains(image)) {
+                    	gallery.setSelected(item, true, false);
+                    }
                 }
             }
         });
@@ -597,6 +604,10 @@ public class ImagesViewPart extends ViewPart {
             }
         }
         this.prepareImages(images);
+        IImageEntry[] selection = getSelection();
+        if (selection != null) {
+        	currentSelection = Arrays.asList(selection);
+        }
         gallery.setItemCount(images.size());
         gallery.clearAll();
         if (passedCount <= EXPAND_THRESHOLD) {
