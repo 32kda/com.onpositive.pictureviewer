@@ -245,7 +245,7 @@ public class ImagesViewPart extends ViewPart {
                 }
             }
         };
-        this.tabFolder.setLayoutData((Object)new GridData(1808));
+        this.tabFolder.setLayoutData(new GridData(1808));
         zoomInAction.setText("Zoom In");
         zoomInAction.setImageDescriptor(this.zoom);
         Action zoomOutAction = new Action(){
