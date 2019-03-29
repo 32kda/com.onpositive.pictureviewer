@@ -2,7 +2,7 @@
 <feature
       id="com.onpositive.pictureviewer.feature"
       label="Picture Viewer Feature"
-      version="1.1.1.qualifier"
+      version="1.1.2.qualifier"
       provider-name="OnPositive">
 
    <description url="https://github.com/32kda/com.onpositive.pictureviewer">

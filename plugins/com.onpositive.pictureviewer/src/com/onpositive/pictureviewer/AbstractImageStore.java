@@ -3,20 +3,15 @@
  */
 package com.onpositive.pictureviewer;
 
-import com.onpositive.pictureviewer.FileImageEntry;
-import com.onpositive.pictureviewer.IImageEntry;
-import com.onpositive.pictureviewer.IImageStore;
-import com.onpositive.pictureviewer.IStoreImageListener;
-import com.onpositive.pictureviewer.ItemGroup;
-import com.onpositive.pictureviewer.JarImageEntry;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -43,58 +38,56 @@ implements IImageStore {
         s.start();
     }
 
-    protected synchronized void reprocess(HashSet<String> names) {
-        File file = this.getFile();
-        HashSet<ItemGroup> toRemove = new HashSet<ItemGroup>();
-        HashSet<ItemGroup> toAdd = new HashSet<ItemGroup>();
-        for (ItemGroup currentGroup : this.imageList) {
-            if (!names.contains(currentGroup.getName())) continue;
-            toRemove.add(currentGroup);
-            names.remove(currentGroup.getName());
-            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
-            ItemGroup newGroup = new ItemGroup(currentGroup.getName(), entries);
-            File file2 = new File(file, currentGroup.getName());
-            this.parse(entries, file2, file2);
-            if (entries.isEmpty()) continue;
-            toAdd.add(newGroup);
-        }
-        for (String name : names) {
-            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
-            ItemGroup newGroup = new ItemGroup(name, entries);
-            File file2 = new File(file, name);
-            this.parse(entries, file2, file2);
-            if (entries.isEmpty()) continue;
-            toAdd.add(newGroup);
-        }
-        this.imageList.removeAll(toRemove);
-        this.imageList.addAll(toAdd);
-        this.fireChanged();
-    }
+//    protected synchronized void reprocess(HashSet<String> names) {
+//        File file = this.getFile();
+//        HashSet<ItemGroup> toRemove = new HashSet<ItemGroup>();
+//        HashSet<ItemGroup> toAdd = new HashSet<ItemGroup>();
+//        for (ItemGroup currentGroup : this.imageList) {
+//            if (!names.contains(currentGroup.getName())) continue;
+//            toRemove.add(currentGroup);
+//            names.remove(currentGroup.getName());
+//            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+//            ItemGroup newGroup = new ItemGroup(currentGroup.getName(), entries);
+//            File file2 = new File(file, currentGroup.getName());
+//            this.parse(entries, file2, file2);
+//            if (entries.isEmpty()) continue;
+//            toAdd.add(newGroup);
+//        }
+//        for (String name : names) {
+//            ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+//            ItemGroup newGroup = new ItemGroup(name, entries);
+//            File file2 = new File(file, name);
+//            this.parse(entries, file2, file2);
+//            if (entries.isEmpty()) continue;
+//            toAdd.add(newGroup);
+//        }
+//        this.imageList.removeAll(toRemove);
+//        this.imageList.addAll(toAdd);
+//        this.fireChanged();
+//    }
 
-    public abstract File getFile();
+    public abstract List<File> getJarFiles();
 
     protected void initPlatform() {
         this.imageList.clear();
         this.fireChanged();
-        File file = this.getFile();
-        if (file != null && file.exists()) {
-            File[] listFiles = file.listFiles();
-            int n = listFiles.length;
-            for (int i = 0; i < n; i++) {
-            	File curFile = listFiles[i];
-            	if (curFile.getName().charAt(0) != '.') {
-            		ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
-            		ItemGroup group = new ItemGroup(curFile.getName(), entries);
-            		this.parse(entries, curFile, curFile);
-            		if (group.getChildCount() > 0) {
-            			this.fetched(group);
-            		}
-            	}
+        List<File> files = getJarFiles();
+        if (files != null) {
+        	Collections.sort(files);
+        	for (File file : files) {
+        		if (file.getName().charAt(0) != '.') {
+        			ArrayList<IImageEntry> entries = new ArrayList<IImageEntry>();
+        			ItemGroup group = new ItemGroup(file.getName(), entries);
+        			this.parse(entries, file, file);
+        			if (group.getChildCount() > 0) {
+        				this.fetched(group);
+        			}
+        		}
 			}
-        }
+		}
         this.fireChanged(); 
     }
-
+    
     private synchronized void fetched(ItemGroup group) {
         this.imageList.add(group);
         this.fireChanged();

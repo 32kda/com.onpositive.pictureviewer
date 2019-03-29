@@ -60,7 +60,7 @@ implements IImageStore {
             ArrayList<IImageEntry> za = new ArrayList<IImageEntry>();
             ItemGroup newF = new ItemGroup(itemGroup.getName(), za);
             IProject file2 = ((IWorkspaceRoot)file).getProject(itemGroup.getName());
-            this.parse(za, (IResource)file2, (IResource)file2);
+            this.parse(za, (IResource)file2);
             if (za.isEmpty()) continue;
             toAdd.add(newF);
         }
@@ -68,7 +68,7 @@ implements IImageStore {
             ArrayList<IImageEntry> za = new ArrayList<IImageEntry>();
             ItemGroup newF = new ItemGroup(s, za);
             IProject file2 = ((IWorkspaceRoot)file).getProject(s);
-            this.parse(za, (IResource)file2, (IResource)file2);
+            this.parse(za, (IResource)file2);
             if (za.isEmpty()) continue;
             toAdd.add(newF);
         }
@@ -82,18 +82,18 @@ implements IImageStore {
     protected void initPlatform() {
         this.imageList.clear();
         this.fireChanged();
-        IContainer file = this.getFile();
-        if (file != null && file.exists()) {
+        IContainer container = this.getFile();
+        if (container != null && container.exists()) {
             try {
-                IResource[] listFiles = file.members();
+                IResource[] listFiles = container.members();
                 int n = listFiles.length;
                 int n2 = 0;
                 while (n2 < n) {
-                    IResource f = listFiles[n2];
-                    if (f.getName().charAt(0) != '.') {
-                        ArrayList<IImageEntry> z = new ArrayList<IImageEntry>();
-                        ItemGroup group = new ItemGroup(f.getName(), z);
-                        this.parse(z, f, f);
+                    IResource resource = listFiles[n2];
+                    if (isValid(resource) && resource.getName().charAt(0) != '.') {
+                        ArrayList<IImageEntry> imgs = new ArrayList<IImageEntry>();
+                        ItemGroup group = new ItemGroup(resource.getName(), imgs);
+                        this.parse(imgs, resource);
                         if (group.getChildCount() > 0) {
                             this.fetched(group);
                         }
@@ -108,6 +108,10 @@ implements IImageStore {
         this.fireChanged();
     }
 
+	private boolean isValid(IResource resurce) {
+		return resurce.exists() && !resurce.isHidden() && resurce.getProject().isOpen(); 
+	}
+
     private synchronized void fetched(ItemGroup group) {
         this.imageList.add(group);
         this.fireChanged();
@@ -119,16 +123,16 @@ implements IImageStore {
         }
     }
 
-    private void parse(ArrayList<IImageEntry> ls, IResource f, IResource root) {
-        if (f instanceof IContainer) {
-            if (f.getName().charAt(0) != '.') {
+    private void parse(ArrayList<IImageEntry> imageEntries, IResource resource) {
+        if (resource instanceof IContainer) {
+            if (resource.getName().charAt(0) != '.') {
                 try {
-                    IResource[] listFiles = ((IContainer)f).members();
+                    IResource[] listFiles = ((IContainer)resource).members();
                     int n = listFiles.length;
                     int n2 = 0;
                     while (n2 < n) {
-                        IResource fa = listFiles[n2];
-                        this.parse(ls, fa, root);
+                        IResource child = listFiles[n2];
+                        this.parse(imageEntries, child);
                         ++n2;
                     }
                 }
@@ -136,8 +140,8 @@ implements IImageStore {
                     e.printStackTrace();
                 }
             }
-        } else if (AbstractWorskspaceImageEntry.isImage(f.getName())) {
-            ls.add(new IFileImageEntry((IFile)f));
+        } else if (AbstractWorskspaceImageEntry.isImage(resource.getName())) {
+            imageEntries.add(new IFileImageEntry((IFile)resource));
         }
     }
 

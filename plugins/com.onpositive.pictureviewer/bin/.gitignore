@@ -1,2 +1,4 @@
 /com/
+bin/
+target/
 *.class
