@@ -74,9 +74,9 @@ extends DefaultToolTip {
         if (!super.shouldCreateToolTip(event)) {
             return false;
         }
-        TreeViewer tv = (TreeViewer)this.viewer;
-        TreeItem item = tv.getTree().getItem(new Point(event.x, event.y));
-        this.viewer.getControl().setToolTipText("");
+        Tree curTree = (Tree) (tree != null ? tree : ((TreeViewer) viewer).getTree());
+        TreeItem item = curTree.getItem(new Point(event.x, event.y));
+        curTree.setToolTipText("");
         if (item != null) {
             this.setPopupDelay(POPUP_DELAY);
             this.setHideDelay(POPUP_HIDE_DELAY);
@@ -90,8 +90,9 @@ extends DefaultToolTip {
     protected void afterHideToolTip(Event event) {
         super.afterHideToolTip(event);
         this.setData("org.eclipse.jface_VIEWER_CELL_KEY", null);
-        if (event != null && event.widget != this.viewer.getControl()) {
-            this.viewer.getControl().setFocus();
+        Tree curTree = (Tree) (tree != null ? tree : ((TreeViewer) viewer).getTree());
+        if (event != null && event.widget != curTree) {
+            curTree.setFocus();
         }
     }
 }
